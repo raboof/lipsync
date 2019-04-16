@@ -1,0 +1,165 @@
+<html lang="en">
+ 
+  <head>
+    <meta charset="UTF-8">
+    <title>Viewing a Webcam Feed and Grabbing Frames with the MediaDevices API</title>
+    <style>
+      #webcam, #capture {
+        display: inline-block;
+        border: solid 1px black;
+        width: 320px;
+        height: 240px
+      }
+      #dropdown { display: block; }
+    </style>
+    <script src="js/ffmpeg-webm.browser.js"></script>
+  </head>
+ 
+  <body>
+    <p><select name="dropdown" id="dropdown"></select></p>
+    <video id="webcam"></video>
+    <audio id="mic"></audio>
+    <canvas id="capture" width="320" height="240"></canvas>
+    <p id="out">Click the video feed to capture a frame!</p>
+    <p id="err">Click the video feed to capture a frame!</p>
+    <script>
+
+function triggerAuthorizationPrompt() {
+console.log('t'); 
+ 
+  //if (!navigator.mediaDevices) {
+  //  throw new Error("The MediaDevices API is not supported.");
+ // }
+ 
+console.log('t'); 
+  const p = navigator.mediaDevices.enumerateDevices().then(function(devices) {
+    let s = "";
+    devices.forEach(function(d) {
+      s = s + d.kind + d.deviceId + "<br>"
+    });
+});
+console.log('p'); 
+  return p
+}
+ 
+function getWebcams() {
+ 
+  return new Promise((resolve, reject) => {
+ 
+    // Filter found devices to only keep "videoinput" devices
+    navigator.mediaDevices.enumerateDevices()
+      .then(devices => {
+ 
+        let filtered = devices.filter((device) => {
+          return device.kind === "videoinput"
+        });
+ 
+        resolve(filtered);
+ 
+      })
+ 
+  });
+ 
+}
+
+function populateDropDownMenu(webcams) {
+  let dropdown = document.getElementById("dropdown");
+ 
+  webcams.forEach((cam) => {
+    let option = document.createElement("option");
+    option.text = cam.deviceId;
+    option.value = cam.deviceId;
+    dropdown.options.add(option);
+  });
+ 
+}
+
+var last = 0
+
+function onData(event) {
+  const prev = event.timeStamp - last
+  last = event.timeStamp
+  document.getElementById("out").innerHTML = event.data.type + '@' + prev;
+  const arrayBuffer = event.data
+  console.log('Got input', arrayBuffer)
+  // thanks https://stackoverflow.com/questions/40363335/how-to-create-an-audiobuffer-from-a-blob
+  let fileReader = new FileReader();
+  fileReader.onloadend = () => {
+    console.log('array buffer', fileReader.result);
+    console.log(window.ffmpeg)
+    let stdout = "";
+    let stderr = "";
+    window.ffmpeg({
+      arguments: ["-version"],
+      print: function(data) { stdout += data + "\n"; },
+      printErr: function(data) { stderr += data + "\n"; },
+      onExit: function(code) {
+        console.log("Process exited with code " + code);
+        console.log(stdout);
+        document.getElementById("out").innerHTML = stdout;
+      },
+    });
+  }
+  fileReader.readAsArrayBuffer(event.data);
+}
+
+
+function onWebcamSelected() {
+console.log('w'); 
+
+  // Fetch our video element
+  let videoElement = document.getElementById("webcam");
+
+  // Retrieve the webcam's device id and use it in the constraints object
+  let dropdown = document.getElementById("dropdown");
+  let id = dropdown.options[dropdown.selectedIndex].value;
+
+  //let constraints = { audio: false, video: true }
+  let constraints = {
+    audio: true,
+    //video: { deviceId: { exact: id } }
+    video: true 
+//{ 
+ //     width: { ideal: 640 },
+  ///    height: { ideal: 480 },
+    //  deviceId: { exact: id },
+   // }
+  };
+
+  // Attach the webcam feed to a video element so we can view it
+  return navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream => {
+      document.getElementById("out").innerHTML = "c";
+      const rec = new MediaRecorder(stream);
+      rec.ondataavailable = onData;
+      rec.start(3000);
+      //setTimeout(function() { rec.stop(); }, 5000)
+      //document.getElementById("out").innerHTML = "d";
+      //videoElement.srcObject = stream;
+      //videoElement.onloadedmetadata = function(e) {
+      //  videoElement.play();
+      //}
+    });
+
+}
+
+document.getElementById("out").innerHTML = "a";
+document.getElementById("out").innerHTML = MediaRecorder.ondataavailable;
+document.getElementById("out").innerHTML = "b";
+
+getWebcams()
+  .then(populateDropDownMenu)
+  .then(onWebcamSelected)
+  .catch(function (e) {
+    document.getElementById("err").innerHTML = e.name;
+    console.log(e.name);
+  })
+
+dropdown.addEventListener("change", onWebcamSelected);
+
+
+</script>
+  </body>
+ 
+</html>
+

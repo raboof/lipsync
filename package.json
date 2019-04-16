@@ -1,0 +1,16 @@
+{
+  "name": "lipsync",
+  "version": "0.0.1",
+  "description": "lipsync web app",
+  "main": "index.js",
+  "scripts": {
+    "build": "browserify ffmpeg-webm.js -o js/ffmpeg-webm.browser.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ffmpeg.js": "3.1.9001"
+  }
+}
